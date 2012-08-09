@@ -36,8 +36,12 @@ internalize (Atom name)
   = Var name
 internalize (List [Atom "lambda", List atoms@(_:_), sexp])
   = desugarLams (atoms, sexp)
+internalize sexp@(List (Atom "lambda" : _))
+  = error $ "syntax error: " ++ show sexp
 internalize (List [Atom "define", Atom name, sexp])
   = Def name $ internalize sexp
+internalize sexp@(List (Atom "define" : _))
+  = error $ "syntax error: " ++ show sexp
 internalize (List sexps@(_:_:_))
   = desugarApps sexps
 internalize (List [sexp])
