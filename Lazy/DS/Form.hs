@@ -3,7 +3,7 @@ module Form
   , internalize, externalize
   , REnv
   , vacantREnv, searchREnv, extendREnv
-  , liftupForm, liftupREnv )
+  , liftupForm )
 where
 
 
@@ -109,11 +109,4 @@ liftupForm name form@(Lam nick body)
   | otherwise    = Lam nick (liftupForm name body)
 liftupForm name (App optr opnd)
   = App (liftupForm name optr) (liftupForm name opnd)
-
-liftupREnv :: Name -> REnv -> REnv
-liftupREnv name
-  = Map.mapWithKey liftUpon
-  where liftUpon nick forms
-          | nick == name = forms
-          | otherwise    = Pld.map (liftupForm name) forms
 

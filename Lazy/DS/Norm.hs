@@ -7,21 +7,25 @@ import SExp (Name)
 import Form
 
 
-normalize :: Form -> REnv -> (REnv, Form)
-normalize (Var name indx) renv
-  = (renv, searchREnv name indx renv)
-normalize (Lam name body) renv
-  = (renv, Lam name . snd . normalize body $ liftupREnv name renv)
-normalize (App optr opnd) renv
-  = reduce (snd $ normalize optr renv) opnd renv
-normalize (Def name form) renv
-  = let (nenv, norm) = normalize form renv
-     in (extendREnv name norm nenv, Nul)
+normalize :: Form -> Maybe Name -> REnv -> (REnv, Form)
+normalize form@(Var nick indx) Nothing renv
+  = (renv, searchREnv nick indx renv)
+normalize form@(Var nick indx) (Just name) renv
+  | nick == name && indx > 0 = (renv, liftupForm name $ searchREnv name (indx - 1) renv)
+  | nick /= name             = (renv, liftupForm name $ searchREnv nick indx renv)
+  | otherwise                = (renv, form)
+normalize (Lam nick body) _ renv
+  = (renv, Lam nick . snd $ normalize body (Just nick) renv)
+normalize (App optr opnd) mnam renv
+  = reduce (snd $ normalize optr mnam renv) opnd mnam renv
+normalize (Def nick form) mnam renv
+  = let (nenv, norm) = normalize form mnam renv
+     in (extendREnv nick norm nenv, Nul)
 
-reduce :: Form -> Form -> REnv -> (REnv, Form)
-reduce (Lam name body) opnd renv
-  = let lenv = extendREnv name (snd $ normalize opnd renv) vacantREnv
-     in (renv, snd $ normalize body lenv)
-reduce optr opnd renv
-  = (renv, App optr . snd $ normalize opnd renv)
+reduce :: Form -> Form -> Maybe Name -> REnv -> (REnv, Form)
+reduce (Lam nick body) opnd mnam renv
+  = let lenv = extendREnv nick (snd $ normalize opnd mnam renv) vacantREnv
+     in (renv, snd $ normalize body Nothing lenv)
+reduce optr opnd mnam renv
+  = (renv, App optr . snd $ normalize opnd mnam renv)
 

@@ -24,7 +24,7 @@ prompt = flushStr "CbNLC> "
 rep :: REnv -> String -> IO REnv
 rep renv inpt
   = do let form = readForm "stdin" inpt
-           (nenv, norm) = normalize form renv
+           (nenv, norm) = normalize form Nothing renv
        putStrLn $ show norm
        return nenv
 
