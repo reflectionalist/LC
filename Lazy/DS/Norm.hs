@@ -21,7 +21,7 @@ normalize (Def name form) renv
 reduce :: Form -> Form -> REnv -> (REnv, Form)
 reduce (Lam name body) opnd renv
   = let lenv = extendREnv name (snd $ normalize opnd renv) vacantREnv
-     in (renv, snd . normalize body $ liftupREnv name lenv)
+     in (renv, snd $ normalize body lenv)
 reduce optr opnd renv
   = (renv, App optr . snd $ normalize opnd renv)
 
