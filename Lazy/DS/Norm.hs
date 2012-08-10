@@ -3,21 +3,25 @@ module Norm
 where
 
 
+import SExp (Name)
 import Form
 
 
-normalize :: REnv -> Form -> (REnv, Form)
-normalize renv (Var name)
-  = (renv, searchREnv renv name)
-normalize renv (Lam name body)
-  = (renv, Clo renv name body)
-normalize renv (App optr opnd)
-  = reduce renv (snd $ normalize renv optr) opnd
-normalize renv (Def name form)
-  = let (nenv, norm) = normalize renv form
-     in ((name, norm) : nenv, Nul)
+normalize :: Form -> REnv -> (REnv, Form)
+normalize (Var name indx) renv
+  = (renv, searchREnv name indx renv)
+normalize (Lam name body) renv
+  = (renv, Lam name . snd . normalize body $ liftupREnv name renv)
+normalize (App optr opnd) renv
+  = reduce (snd $ normalize optr renv) opnd renv
+normalize (Def name form) renv
+  = let (nenv, norm) = normalize form renv
+     in (extendREnv name norm nenv, Nul)
 
-reduce :: REnv -> Form -> Form -> (REnv, Form)
-reduce renv (Clo senv name body) opnd
-  = (renv, snd $ normalize (extendREnv senv [(name, snd $ normalize renv opnd)]) body)
+reduce :: Form -> Form -> REnv -> (REnv, Form)
+reduce (Lam name body) opnd renv
+  = let lenv = extendREnv name (snd $ normalize opnd renv) vacantREnv
+     in (renv, snd . normalize body $ liftupREnv name lenv)
+reduce optr opnd renv
+  = (renv, App optr . snd $ normalize opnd renv)
 

@@ -3,7 +3,7 @@ module Main where
 
 import System.IO
 import Text.Parsec
-import SExp
+import SExp (parseSExp, readSExp)
 import Form
 import Norm
 
@@ -19,12 +19,12 @@ flushStr str
   = putStr str >> hFlush stdout
 
 prompt :: IO ()
-prompt = flushStr "CbVLC> "
+prompt = flushStr "CbNLC> "
 
 rep :: REnv -> String -> IO REnv
 rep renv inpt
   = do let form = readForm "stdin" inpt
-           (nenv, norm) = normalize renv form
+           (nenv, norm) = normalize form renv
        putStrLn $ show norm
        return nenv
 
@@ -38,5 +38,5 @@ repl renv
                   repl nenv
 
 main :: IO ()
-main = repl []
+main = repl vacantREnv
 
