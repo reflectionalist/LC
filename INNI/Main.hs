@@ -27,16 +27,16 @@ repl cal
        if inp == ""
           then putStrLn ""
           else case words inp of
-                 [":set"]         -> do putStrLn ("Too few arguments to :set")
-                                        repl cal
-                 ":set" : nam : _ -> case lookup nam cals of
+                 ["set", nam]    -> case lookup nam cals of
                    Just cal -> repl cal
-                   Nothing  -> do putStrLn ("Unsupported calculators: " ++ nam)
+                   Nothing  -> do putStrLn ("REPL error: unknown normalization strategy: " ++ nam)
                                   repl cal
-                 _                -> do let imp = readForm "stdin" inp
-                                            ans = cal imp
-                                        putStrLn (show ans)
-                                        repl cal
+                 ("set" : _ : _) -> do putStrLn "REPL error: too many arguments to the command `set`"
+                                       repl cal
+                 _               -> do let imp = readForm "stdin" inp
+                                           ans = cal imp
+                                       putStrLn (show ans)
+                                       repl cal
 
 cals :: [(String, Imp -> Imp)]
 cals =

@@ -31,7 +31,7 @@ desugarAbss (Atom name : sexps)
 
 desugarApps :: [SExp] -> Imp
 desugarApps (sexp : sexp1 : sexps)
-  = Pld.foldl (\papp opnd -> App papp $ internalize opnd)
+  = Pld.foldl (\opr opd -> App opr $ internalize opd)
               (App (internalize sexp) (internalize sexp1))
               sexps
 
