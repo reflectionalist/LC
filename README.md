@@ -1,9 +1,9 @@
 #Lambda Calculators#
 
-This repository provides reference implementaitons of the *pure*
-lambda-calculus in three styles, namely higher-order abstract syntax (HOAS),
-de-Bruijn indices (DBI), indexed names and named indices (INNI).  Each
-implements *8* normalization strategies.
+This repository provides reference implementaitons using Haskell of the *pure*
+lambda-calculus in three styles, namely __Higher-Order Abstract Syntax__
+(**HOAS**), __De-Bruijn Indices__ (**DBI**), __Indexed Names and Named
+Indices__ (**INNI**).  Each implements *8* normalization strategies.
 
 Currently, a REPL is provided for the INNI-style implementation.  To try it,
 enter the `INNI` directory and compile the `Main.hs` file using GHC.
