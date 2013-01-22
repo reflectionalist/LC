@@ -6,7 +6,7 @@ data Imp
 -- by-name normalization
 bnn :: Imp -> Imp
 bnn imp = case imp of
-  Abs fun     -> imp
+  Abs _       -> imp
   App opr opd -> case bnn opr of
     Abs fun -> bnn (fun opd)
 
@@ -20,7 +20,7 @@ non imp = case imp of
 -- by-value normalization
 bvn :: Imp -> Imp
 bvn imp = case imp of
-  Abs fun     -> imp
+  Abs _       -> imp
   App opr opd -> case bnn opr of
     Abs fun -> bvn $ fun (bvn opd)
 
