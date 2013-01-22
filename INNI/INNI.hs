@@ -1,4 +1,8 @@
-import Prelude hiding (abs)
+module INNI where
+
+
+import Prelude as Pld hiding (abs)
+import SExp
 
 
 type Nom = String
@@ -9,8 +13,6 @@ data Imp
   = Var Nom Ind
   | Abs Nom Imp
   | App Imp Imp
-  deriving (Show)
-
 
 var :: Nom -> Imp
 var nom = Var nom 0
@@ -20,6 +22,51 @@ abs = Abs
 
 app :: Imp -> Imp -> Imp
 app = App
+
+desugarAbss :: [SExp] -> Imp
+desugarAbss [Atom name, sexp]
+  = Abs name $ internalize sexp
+desugarAbss (Atom name : sexps)
+  = Abs name $ desugarAbss sexps
+
+desugarApps :: [SExp] -> Imp
+desugarApps (sexp : sexp1 : sexps)
+  = Pld.foldl (\papp opnd -> App papp $ internalize opnd)
+              (App (internalize sexp) (internalize sexp1))
+              sexps
+
+internalize :: SExp -> Imp
+internalize (Atom name)
+  = var name
+internalize (List (Atom "->" : sexps))
+  = desugarAbss sexps
+internalize (List (Atom "<-" : sexps))
+  = desugarApps sexps
+
+ensugarAbss :: Imp -> SExp
+ensugarAbss imp = List (Atom "->" : ensugar imp)
+  where ensugar (Abs nom bod@(Abs _ _))
+          = let sexps = ensugar bod
+             in (Atom nom : sexps)
+        ensugar (Abs nom bod)
+          = [Atom nom, externalize bod]
+
+ensugarApps :: Imp -> SExp
+ensugarApps imp = List (Atom "<-" : ensugar imp)
+  where ensugar (App opr@(App _ _) opd)
+          = let sexps = ensugar opr
+             in sexps ++ [externalize opd]
+        ensugar (App opr opd)
+          = [externalize opr, externalize opd]
+
+externalize :: Imp -> SExp
+externalize imp = case imp of
+  Var nom ind -> Atom (nom ++ if ind == 0 then "" else show ind)
+  Abs _ _     -> ensugarAbss imp
+  App _ _     -> ensugarApps imp
+
+instance Show Imp where
+  show = show . externalize
 
 
 {- an inefficient implementation
