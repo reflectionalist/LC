@@ -42,7 +42,7 @@ translated into the more traditional syntax.  For example,
 will translate to
 
 ```
-(\x . \y . x) y z
+(\x.\y.x) y z
 ```
 
 So `<-` means application, and `->` means abstraction.  Note that the last
@@ -52,15 +52,15 @@ in `(-> x y x)` is the funciton body.
 The input expression in the above interactive session corresponds to
 
 ```
-(\m . \n . \f . \x . m f (n f x)) (\f . \x . f x) (\f . \x . f (f x))
+(\m.\n.\f.\x.m f (n f x)) (\f.\x.f x) (\f.\x.f (f x))
 ```
 
 which means adding the Church-numeral one and two.  As expected, the
 Church-numeral three was returned, because by default the REPL uses the
-**normal-order** (*non*) normalization strategy.  Other strategies, including
-**call-by-name** (*bnn*), **applicative-order** (*aon*), **call-by-value**
-(*bvn*), **hybrid-applicative-order** (*han*), **head-spine** (*hsn*),
-**head** (*hdn*), and **hybrid-normal-order** (*hnn*) can be chosen on the fly
+**normal-order** (_non_) normalization strategy.  Other strategies, including
+**call-by-name** (_bnn_), **applicative-order** (_aon_), **call-by-value**
+(_bvn_), **hybrid-applicative-order** (_han_), **head-spine** (_hsn_),
+**head** (_hdn_), and **hybrid-normal-order** (_hnn_) can be chosen on the fly
 by means of the built-in `:set` command of the REPL.
 
 ```
