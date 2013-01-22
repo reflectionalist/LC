@@ -57,14 +57,14 @@ The input expression in the above interactive session corresponds to
 
 which means adding the Church-numeral one and two.  As expected, the
 Church-numeral three was returned, because by default the REPL uses the
-**normal-order** (_non_) normalization strategy.  Other strategies, including
-**call-by-name** (_bnn_), **applicative-order** (_aon_), **call-by-value**
-(_bvn_), **hybrid-applicative-order** (_han_), **head-spine** (_hsn_),
-**head** (_hdn_), and **hybrid-normal-order** (_hnn_) can be chosen on the fly
-by means of the built-in `:set` command of the REPL.
+__normal-order__ (*non*) normalization strategy.  Other strategies, including
+__call-by-name__ (*bnn*), __applicative-order__ (*aon*), __call-by-value__
+(*bvn*), __hybrid-applicative-order__ (*han*), __head-spine__ (*hsn*),
+__head__ (*hdn*), and __hybrid-normal-order__ (*hnn*) can be chosen on the fly
+by the built-in `set` command of the REPL.
 
 ```
-LC> :set bnn
+LC> set bnn
 ```
 
 After issuing this command in the REPL, the call-by-name normalization
@@ -72,7 +72,7 @@ strategy is chosen.  Retyping in the above expression will not result the
 Church-numeral three because call-by-name does not normalize under lambda.
 
 ```
-LC> (<- (<- (-> m n f x (<- m f (<- n f x))) (-> f x (<- f x))) (-> f x (<- f (<- f x))))                                                                                     
+LC> (<- (<- (-> m n f x (<- m f (<- n f x))) (-> f x (<- f x))) (-> f x (<- f (<- f x))))
 (-> f x (<- (-> f x (<- f x)) f (<- (-> f x (<- f (<- f x))) f x)))
 ```
 
