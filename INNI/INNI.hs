@@ -69,6 +69,35 @@ instance Show Imp where
   show = show . externalize
 
 
+-- is normal form?
+isNFM :: Imp -> Bool
+isNFM imp = case imp of
+  Var _   _   -> True
+  Abs _   bod -> isNFM bod
+  App opr opd -> isNFM opr && isNFM opd
+
+-- is head normal form?
+isHNF :: Imp -> Bool
+isHNF imp = case imp of
+  Var _   _   -> True
+  Abs _   bod -> isHNF bod
+  App opr opd -> isHNF opr
+
+-- is weak normal form?
+isWNF :: Imp -> Bool
+isWNF imp = case imp of
+  Var _   _   -> True
+  Abs _   bod -> True
+  App opr opd -> isWNF opr && isWNF opd
+
+-- is weak head normal form?
+isWHN :: Imp -> Bool
+isWHN imp = case imp of
+  Var _   _   -> True
+  Abs _   bod -> True
+  App opr opd -> isWHN opr
+
+
 {- an inefficient implementation
 
 type Sub = Imp -> Imp
@@ -125,8 +154,8 @@ lif nam sub var@(Var nom ind)
 -- by-name normalization
 bnn :: Imp -> Imp
 bnn imp = case imp of
-  Var _ _     -> imp
-  Abs _ _     -> imp
+  Var _   _   -> imp
+  Abs _   _   -> imp
   App opr opd -> case bnn opr of
     Abs nom bod -> bnn (cfs nom 0 opd bod)
     whn         -> App whn opd
@@ -134,7 +163,7 @@ bnn imp = case imp of
 -- normal-order normalization
 non :: Imp -> Imp
 non imp = case imp of
-  Var _ _     -> imp
+  Var _   _   -> imp
   Abs nom bod -> Abs nom (non bod)
   App opr opd -> case bnn opr of
     Abs nom bod -> non (cfs nom 0 opd bod)
@@ -143,11 +172,13 @@ non imp = case imp of
 -- by-value normalization
 bvn :: Imp -> Imp
 bvn imp = case imp of
-  Var _ _ -> imp
-  Abs _ _ -> imp
+  Var _   _   -> imp
+  Abs _   _   -> imp
   App opr opd -> case bvn opr of
-    Abs nom bod -> bvn $ cfs nom 0 (bvn opd) bod
-    wnf         -> App wnf (bvn opd)
+    Abs nom bod -> case bvn opd of
+                     arg | isWNF arg -> bvn $ cfs nom 0 arg bod
+    wnf         -> case bvn opd of
+                     arg | isWNF arg -> App wnf arg
 
 -- applicative-order normalization
 aon :: Imp -> Imp
@@ -155,8 +186,10 @@ aon imp = case imp of
   Var _ _     -> imp
   Abs nom bod -> Abs nom (aon bod)
   App opr opd -> case aon opr of
-    Abs nom bod -> aon $ cfs nom 0 (aon opd) bod
-    nfm         -> App nfm (aon opd)
+    Abs nom bod -> case aon opd of
+                     arg | isNFM arg -> aon $ cfs nom 0 arg bod
+    nfm         -> case aon opd of
+                     arg | isNFM arg -> App nfm arg
 
 -- hybrid applicative-order normalization
 han :: Imp -> Imp
@@ -164,8 +197,10 @@ han imp = case imp of
   Var _ _     -> imp
   Abs nom bod -> Abs nom (han bod)
   App opr opd -> case bvn opr of
-    Abs nom bod -> han $ cfs nom 0 (han opd) bod
-    wnf         -> App (han wnf) (han opd)
+    Abs nom bod -> case han opd of
+                     arg | isNFM arg -> han $ cfs nom 0 arg bod
+    wnf         -> case han opd of
+                     arg | isNFM arg -> App (han wnf) arg
 
 -- head-spine normalization
 hsn :: Imp -> Imp
