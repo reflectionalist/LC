@@ -36,6 +36,7 @@ bne env imp = case imp of
 rfy :: Imp -> Imp
 rfy imp = case imp of
   Clo env bod -> Abs . rfy $ bne (Var 0 : env) bod
+  App opr opd -> App (rfy opr) (rfy opd)
   _           -> imp
 
 nbe :: Imp -> Imp
