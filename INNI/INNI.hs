@@ -246,7 +246,7 @@ shf nam lvl stp imp = case imp of
   Var nom ind | nom /= nam -> imp
               | ind < lvl  -> imp
               | otherwise  -> Var nom (ind + stp)
-  Abs nom bod | nom /= nam -> imp
+  Abs nom bod | nom /= nam -> Abs nom $ shf nom lvl stp bod
               | otherwise  -> Abs nom $ shf nam (lvl + 1) stp bod
   App opr opd -> App (shf nam lvl stp opr) (shf nam lvl stp opd)
 
