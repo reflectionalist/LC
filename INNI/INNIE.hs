@@ -1,4 +1,4 @@
-module EINNI where
+module INNIE where
 
 
 import Prelude as P hiding (abs)
