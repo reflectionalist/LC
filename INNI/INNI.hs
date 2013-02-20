@@ -240,7 +240,7 @@ cfs nam lvl sub imp = case imp of
               | otherwise  -> Abs nom $ cfs nam (lvl + 1) (shf nom lvl 1 sub) bod
   App opr opd -> App (cfs nam lvl sub opr) (cfs nam lvl sub opd)
 
--- shift named-index by 1
+-- shift named-index by step
 shf :: Nom -> Lvl -> Int -> Imp -> Imp
 shf nam lvl stp imp = case imp of
   Var nom ind | nom /= nam -> imp
