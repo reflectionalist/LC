@@ -28,12 +28,16 @@ app = P.foldl App
 
 type Env = Map Nom (Seq Imp)
 
-search :: Env -> Nom -> Ind -> Maybe (Maybe Imp)
-search env nom ind = do
-  seq <- M.lookup nom env
-  if ind < S.length seq
-     then Just (Just $ S.index seq ind)
-     else Just Nothing
+data Option a
+  = None
+  | Over
+  | Some a
+
+search :: Env -> Nom -> Ind -> Option Imp
+search env nom ind = case M.lookup nom env of
+  Just seq | ind < S.length seq -> Some (S.index seq ind)
+           | otherwise          -> Over
+  Nothing  -> None
 
 extend :: Env -> Nom -> Imp -> Env
 extend env nom val
@@ -43,9 +47,9 @@ extend env nom val
 eval :: Env -> Imp -> Imp
 eval env imp = case imp of
   Var nom ind -> case search env nom ind of
-    Just Nothing    -> Var nom (ind - 1)
-    Just (Just val) -> val
-    Nothing         -> imp
+    Some val -> val
+    Over     -> Var nom (ind - 1)
+    None     -> imp
   Abs nom bod -> Clo env nom bod
   App opr opd -> case eval env opr of
     Clo sen nom bod -> eval (extend sen nom $ eval env opd) bod
