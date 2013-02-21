@@ -70,11 +70,11 @@ instance Show Imp where
 
 
 -- is normal form?
-isNFM :: Imp -> Bool
-isNFM imp = case imp of
+isNF :: Imp -> Bool
+isNF imp = case imp of
   Var _   _   -> True
-  Abs _   bod -> isNFM bod
-  App opr opd -> isNFM opr && isNFM opd
+  Abs _   bod -> isNF bod
+  App opr opd -> isNF opr && isNF opd
 
 -- is head normal form?
 isHNF :: Imp -> Bool
@@ -87,15 +87,15 @@ isHNF imp = case imp of
 isWNF :: Imp -> Bool
 isWNF imp = case imp of
   Var _   _   -> True
-  Abs _   bod -> True
+  Abs _   _   -> True
   App opr opd -> isWNF opr && isWNF opd
 
 -- is weak head normal form?
-isWHN :: Imp -> Bool
-isWHN imp = case imp of
+isWHNF :: Imp -> Bool
+isWHNF imp = case imp of
   Var _   _   -> True
-  Abs _   bod -> True
-  App opr opd -> isWHN opr
+  Abs _   _   -> True
+  App opr opd -> isWHNF opr
 
 
 {- an inefficient implementation
@@ -187,9 +187,9 @@ aon imp = case imp of
   Abs nom bod -> Abs nom (aon bod)
   App opr opd -> case aon opr of
     Abs nom bod -> case aon opd of
-                     arg | isNFM arg -> aon $ cfs nom 0 arg bod
+                     arg | isNF arg -> aon $ cfs nom 0 arg bod
     nfm         -> case aon opd of
-                     arg | isNFM arg -> App nfm arg
+                     arg | isNF arg -> App nfm arg
 
 -- hybrid applicative-order normalization
 han :: Imp -> Imp
@@ -198,9 +198,9 @@ han imp = case imp of
   Abs nom bod -> Abs nom (han bod)
   App opr opd -> case bvn opr of
     Abs nom bod -> case han opd of
-                     arg | isNFM arg -> han $ cfs nom 0 arg bod
+                     arg | isNF arg -> han $ cfs nom 0 arg bod
     wnf         -> case han opd of
-                     arg | isNFM arg -> App (han wnf) arg
+                     arg | isNF arg -> App (han wnf) arg
 
 -- head-spine normalization
 hsn :: Imp -> Imp
