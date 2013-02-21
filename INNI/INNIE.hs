@@ -1,4 +1,7 @@
-module INNIE where
+module INNIE
+  ( var, abs, aps
+  , norm, form, normalize )
+where
 
 
 import Prelude as P hiding (abs)
@@ -23,8 +26,8 @@ var nom = Var nom 0
 abs :: [Nom] -> Imp -> Imp
 abs = flip (P.foldr Abs)
 
-app :: Imp -> [Imp] -> Imp
-app = P.foldl App
+aps :: Imp -> [Imp] -> Imp
+aps = P.foldl App
 
 type Env = Map Nom (Seq Imp)
 
@@ -44,42 +47,42 @@ extend env nom val
   | M.null env = M.singleton nom (S.singleton val)
   | otherwise  = M.insertWith (S.><) nom (S.singleton val) env
 
-eval :: Env -> Imp -> Imp
-eval env imp = case imp of
+norm :: Env -> Imp -> Imp
+norm env imp = case imp of
   Var nom ind -> case search env nom ind of
     Some val -> val
     Over     -> Var nom (ind - 1)
     None     -> imp
   Abs nom bod -> Clo env nom bod
-  App opr opd -> case eval env opr of
-    Clo sen nom bod -> eval (extend sen nom $ eval env opd) bod
-    wnf             -> App wnf (eval env opd)
+  App opr opd -> case norm env opr of
+    Clo sen nom bod -> norm (extend sen nom $ norm env opd) bod
+    wnf             -> App wnf (norm env opd)
 
-shif :: Nom -> Lvl -> Int -> Imp -> Imp
-shif nam lvl stp imp = case imp of
+shift :: Nom -> Lvl -> Int -> Imp -> Imp
+shift nam lvl stp imp = case imp of
   Var nom ind | nom /= nam -> imp
               | ind < lvl  -> imp
               | otherwise  -> Var nom (ind + stp)
-  Abs nom bod     -> Abs nom $ shif nam (if nam == nom then lvl + 1 else lvl) stp bod
-  Clo env nom bod -> Clo env nom $ shif nam (if nam == nom then lvl + 1 else lvl) stp bod
-  App opr opd     -> App (shif nam lvl stp opr) (shif nam lvl stp opd)
+  Abs nom bod     -> Abs nom     $ shift nam (if nam == nom then lvl + 1 else lvl) stp bod
+  Clo env nom bod -> Clo env nom $ shift nam (if nam == nom then lvl + 1 else lvl) stp bod
+  App opr opd     -> App (shift nam lvl stp opr) (shift nam lvl stp opd)
 
-reif :: Imp -> Imp
-reif imp = case imp of
-  Clo env nom bod -> let len = extend (M.map (fmap $ shif nom 0 1) env) nom (var nom)
-                     in  Abs nom $ reif (eval len bod)
-  App opr opd     -> App (reif opr) (reif opd)
+form :: Imp -> Imp
+form imp = case imp of
+  Clo env nom bod -> let len = extend (M.map (fmap $ shift nom 0 1) env) nom (var nom)
+                     in  Abs nom $ form (norm len bod)
+  App opr opd     -> App (form opr) (form opd)
   _               -> imp
 
-nbye :: Imp -> Imp
-nbye = reif . eval M.empty
+normalize :: Imp -> Imp
+normalize = form . norm M.empty
 
 {- Tests
-nbye $ app (abs ["x", "y"] (var "x")) [(var "y")]
-nbye $ app (abs ["x", "y", "z"] (var "x")) [var "y"]
-nbye $ app (abs ["x", "y", "y"] (var "x")) [var "y"]
-nbye $ app (abs ["x", "y", "y"] (var "x")) [abs ["x"] (var "y")]
-nbye $ app (abs ["x", "y", "y"] (var "x")) [abs ["x", "y"] (var "y")]
-nbye $ app (abs ["x", "y", "y"] (var "x")) [abs ["x", "y", "z"] (var "y")]
+normalize $ aps (abs ["x", "y"] (var "x")) [(var "y")]
+normalize $ aps (abs ["x", "y", "z"] (var "x")) [var "y"]
+normalize $ aps (abs ["x", "y", "y"] (var "x")) [var "y"]
+normalize $ aps (abs ["x", "y", "y"] (var "x")) [abs ["x"] (var "y")]
+normalize $ aps (abs ["x", "y", "y"] (var "x")) [abs ["x", "y"] (var "y")]
+normalize $ aps (abs ["x", "y", "y"] (var "x")) [abs ["x", "y", "z"] (var "y")]
 -}
 
