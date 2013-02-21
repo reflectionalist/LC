@@ -29,9 +29,11 @@ bvn :: Imp -> Imp
 bvn imp = case imp of
   Var _       -> imp
   Abs _       -> imp
-  App opr opd -> case bnn opr of
-    Abs fun -> bvn $ fun (bvn opd)
-    wnf     -> App wnf (bvn opd)
+  App opr opd -> case bvn opr of
+    Abs fun -> case bvn opd of
+                 arg | isWNF arg -> bvn (fun arg)
+    wnf     -> case bvn opd of
+                 arg | isWNF arg -> App wnf arg
 
 -- applicative-order normalization
 aon :: Imp -> Imp
@@ -39,8 +41,10 @@ aon imp = case imp of
   Var _       -> imp
   Abs fun     -> Abs (aon . fun)
   App opr opd -> case aon opr of
-    Abs fun -> aon $ fun (aon opd)
-    nfm     -> App nfm (aon opd)
+    Abs fun -> case aon opd of
+                 arg | isNFM arg -> aon (fun arg)
+    nfm     -> case aon opd of
+                 arg | isNFM arg -> App nfm arg
 
 -- hybrid applicative-order normalization
 han :: Imp -> Imp
@@ -48,8 +52,10 @@ han imp = case imp of
   Var _       -> imp
   Abs fun     -> Abs (han . fun)
   App opr opd -> case bvn opr of
-    Abs fun -> han $ fun (han opd)
-    wnf     -> App (han wnf) (han opd)
+    Abs fun -> case han opd of
+                 arg | isNFM arg -> han (fun arg)
+    wnf     -> case han opd of
+                 arg | isNFM arg -> App (han wnf) arg
 
 -- head-spine normalization
 hsn :: Imp -> Imp
