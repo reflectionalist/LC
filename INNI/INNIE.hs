@@ -31,28 +31,28 @@ aps = P.foldl App
 
 type Env = Map Nom (Seq Imp)
 
-data Option a
+data Result a
   = None
-  | Over
-  | Some a
+  | Exact a
+  | Beyond
 
-search :: Env -> Nom -> Ind -> Option Imp
+search :: Env -> Nom -> Ind -> Result Imp
 search env nom ind = case M.lookup nom env of
-  Just seq | ind < S.length seq -> Some (S.index seq ind)
-           | otherwise          -> Over
+  Just seq | ind < S.length seq -> Exact (S.index seq ind)
+           | otherwise          -> Beyond
   Nothing  -> None
 
 extend :: Env -> Nom -> Imp -> Env
-extend env nom val
-  | M.null env = M.singleton nom (S.singleton val)
-  | otherwise  = M.insertWith (S.><) nom (S.singleton val) env
+extend env nom imp
+  | M.null env = M.singleton nom (S.singleton imp)
+  | otherwise  = M.insertWith (S.><) nom (S.singleton imp) env
 
 norm :: Env -> Imp -> Imp
 norm env imp = case imp of
   Var nom ind -> case search env nom ind of
-    Some val -> val
-    Over     -> Var nom (ind - 1)
-    None     -> imp
+    Exact imp -> imp
+    Beyond    -> Var nom (ind - 1)
+    None      -> error $ "Unbound variable: " ++ show imp
   Abs nom bod -> Clo env nom bod
   App opr opd -> case norm env opr of
     Clo sen nom bod -> norm (extend sen nom $ norm env opd) bod
@@ -77,12 +77,13 @@ form imp = case imp of
 normalize :: Imp -> Imp
 normalize = form . norm M.empty
 
-{- Tests
-normalize $ aps (abs ["x", "y"] (var "x")) [(var "y")]
-normalize $ aps (abs ["x", "y", "z"] (var "x")) [var "y"]
-normalize $ aps (abs ["x", "y", "y"] (var "x")) [var "y"]
-normalize $ aps (abs ["x", "y", "y"] (var "x")) [abs ["x"] (var "y")]
-normalize $ aps (abs ["x", "y", "y"] (var "x")) [abs ["x", "y"] (var "y")]
-normalize $ aps (abs ["x", "y", "y"] (var "x")) [abs ["x", "y", "z"] (var "y")]
--}
+
+tests :: [Imp]
+tests =
+  [ normalize $ abs ["y"] (aps (abs ["x", "y"] (var "x")) [(var "y")])
+  , normalize $ abs ["y"] (aps (abs ["x", "y", "z"] (var "x")) [var "y"])
+  , normalize $ abs ["y"] (aps (abs ["x", "y", "y"] (var "x")) [var "y"])
+  , normalize $ abs ["y"] (aps (abs ["x", "y", "y"] (var "x")) [abs ["x"] (var "y")])
+  , normalize $ abs ["y"] (aps (abs ["x", "y", "y"] (var "x")) [abs ["x", "y"] (var "y")])
+  , normalize $ abs ["y"] (aps (abs ["x", "y", "y"] (var "x")) [abs ["x", "y", "z"] (var "y")]) ]
 
