@@ -1,9 +1,10 @@
 module INNIE
-  ( var, als, aps
+  ( var, all, app, als, aps
   , norm, form, normalize )
 where
 
 
+import Prelude as P hiding (all)
 import Data.Map.Strict as M
 import Data.Sequence as S
 
@@ -21,6 +22,12 @@ data Imp
 
 var :: Nom -> Imp
 var nom = Var nom 0
+
+all :: Nom -> Imp -> Imp
+all = All
+
+app :: Imp -> Imp -> Imp
+app = App
 
 als :: [Nom] -> Imp -> Imp
 als = flip (P.foldr All)
@@ -79,10 +86,10 @@ normalize = form . norm M.empty
 
 tests :: [Imp]
 tests =
-  [ normalize $ als ["y"] (aps (als ["x", "y"] (var "x")) [(var "y")])
-  , normalize $ als ["y"] (aps (als ["x", "y", "z"] (var "x")) [var "y"])
-  , normalize $ als ["y"] (aps (als ["x", "y", "y"] (var "x")) [var "y"])
-  , normalize $ als ["y"] (aps (als ["x", "y", "y"] (var "x")) [als ["x"] (var "y")])
-  , normalize $ als ["y"] (aps (als ["x", "y", "y"] (var "x")) [als ["x", "y"] (var "y")])
-  , normalize $ als ["y"] (aps (als ["x", "y", "y"] (var "x")) [als ["x", "y", "z"] (var "y")]) ]
+  [ normalize $ all "y" (app (als ["x", "y"] (var "x")) (var "y"))
+  , normalize $ all "y" (app (als ["x", "y", "z"] (var "x")) (var "y"))
+  , normalize $ all "y" (app (als ["x", "y", "y"] (var "x")) (var "y"))
+  , normalize $ all "y" (app (als ["x", "y", "y"] (var "x")) (all "x" (var "y")))
+  , normalize $ all "y" (app (als ["x", "y", "y"] (var "x")) (als ["x", "y"] (var "y")))
+  , normalize $ all "y" (app (als ["x", "y", "y"] (var "x")) (als ["x", "y", "z"] (var "y"))) ]
 
