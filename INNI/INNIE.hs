@@ -8,6 +8,12 @@ import Prelude as P hiding (all)
 import Data.Map.Strict as M
 import Data.Sequence as S
 
+import Control.Monad.Identity
+import Control.Monad.Error
+import Control.Monad.Reader hiding (All)
+import Control.Monad.State
+import Control.Monad.Writer hiding (All)
+
 
 type Nom = String
 type Ind = Int
@@ -53,16 +59,25 @@ extend env nom imp
   | M.null env = M.singleton nom (S.singleton imp)
   | otherwise  = M.insertWith (S.><) nom (S.singleton imp) env
 
-norm :: Env -> Imp -> Imp
+type Norm r = Identity r
+
+runNorm :: Norm r -> r
+runNorm = runIdentity
+
+norm :: Env -> Imp -> Norm Imp
 norm env imp = case imp of
   Var nom ind -> case search env nom ind of
-    Exact imp -> imp
-    Beyond    -> Var nom (ind - 1)
-    None      -> error $ "Unbound variable: " ++ show imp
-  All nom bod -> Clo env nom bod
-  App opr opd -> case norm env opr of
-    Clo sen nom bod -> norm (extend sen nom $ norm env opd) bod
-    wnf             -> App wnf (norm env opd)
+    Exact imp -> return imp
+    Beyond    -> return $ Var nom (ind - 1)
+    None      -> fail $ "Unbound variable: " ++ show imp
+  All nom bod -> return (Clo env nom bod)
+  App opr opd -> do
+    wnf <- norm env opr
+    case wnf of
+      Clo sen nom bod -> do arg <- norm env opd
+                            norm (extend sen nom arg) bod
+      wnf             -> do arg <- norm env opd
+                            return $ App wnf arg
 
 shift :: Nom -> Lvl -> Int -> Imp -> Imp
 shift nam lvl stp imp = case imp of
@@ -76,12 +91,12 @@ shift nam lvl stp imp = case imp of
 form :: Imp -> Imp
 form imp = case imp of
   Clo env nom bod -> let len = extend (M.map (fmap $ shift nom 0 1) env) nom (var nom)
-                     in  All nom $ form (norm len bod)
+                     in  All nom $ form $ runNorm (norm len bod)
   App opr opd     -> App (form opr) (form opd)
   _               -> imp
 
 normalize :: Imp -> Imp
-normalize = form . norm M.empty
+normalize = form . runNorm . norm M.empty
 
 
 tests :: [Imp]
