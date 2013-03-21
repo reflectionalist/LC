@@ -62,14 +62,26 @@ extend env nom imp
 
 
 type Msg = String
+data Err
+  = Unbound Nom
+  | Unknown Msg
+
+instance Error Err where
+  strMsg = Unknown
+
+instance Show Err where
+  show err = case err of
+      Unbound nom -> "unbound variable `" ++ nom ++ "'"
+      Unknown msg -> msg
+
 type Stp = Integer
-type Normalization r = ReaderT Env (ErrorT Msg (StateT Stp Identity)) r
+type Normalization r = ReaderT Env (ErrorT Err (StateT Stp Identity)) r
 
 tick :: (Num s, MonadState s m) => m ()
 tick = do st <- get
           put (st + 1)
 
-run :: Env -> Stp -> Normalization r -> (Either Msg r, Stp)
+run :: Env -> Stp -> Normalization r -> (Either Err r, Stp)
 run env stp nlz = runIdentity $ runStateT (runErrorT $ runReaderT nlz env) stp
 
 shift :: Nom -> Lvl -> Int -> Imp -> Imp
@@ -91,7 +103,7 @@ normalize imp = case imp of
         case search env nom ind of
             Exact imp -> return imp
             Beyond    -> return $ Var nom (ind - 1)
-            None      -> fail $ "Unbound variable: " ++ show imp
+            None      -> throwError (Unbound nom)
     All nom bod -> do tick
                       env <- ask
                       return (Clo env nom bod)
@@ -122,7 +134,9 @@ norm imp = normalize imp >>= deep
 
 nlz :: Imp -> Imp
 nlz imp = case run M.empty 0 (norm imp) of
-    (Left msg, stp) -> error $ msg ++ ", after " ++ show stp ++ " steps"
+    (Left err, stp) -> error $ show err
+                            ++ " encountered after "
+                            ++ show stp ++ " steps"
     (Right hn, _  ) -> hn
 
 
