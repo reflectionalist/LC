@@ -61,10 +61,10 @@ extend env nom imp
   | otherwise  = M.insertWith (S.><) nom (S.singleton imp) env
 
 
-type Normalization r = Identity r
+type Normalization r = ErrorT String Identity r
 
-run :: Normalization r -> r
-run = runIdentity
+run :: Normalization r -> Either String r
+run = runIdentity . runErrorT
 
 normalize :: Env -> Imp -> Normalization Imp
 normalize env imp = case imp of
@@ -108,7 +108,9 @@ norm :: Env -> Imp -> Normalization Imp
 norm env imp = normalize env imp >>= deep
 
 nlz :: Imp -> Imp
-nlz imp = run (norm M.empty imp)
+nlz imp = case run (norm M.empty imp) of
+    Left err -> error err
+    Right hn -> hn
 
 
 tests :: [Imp]
