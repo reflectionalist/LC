@@ -61,25 +61,10 @@ extend env nom imp
   | otherwise  = M.insertWith (S.><) nom (S.singleton imp) env
 
 
-type Normalization r = ErrorT String Identity r
+type Normalization r = ReaderT Env (ErrorT String Identity) r
 
-run :: Normalization r -> Either String r
-run = runIdentity . runErrorT
-
-normalize :: Env -> Imp -> Normalization Imp
-normalize env imp = case imp of
-    Var nom ind -> case search env nom ind of
-        Exact imp -> return imp
-        Beyond    -> return $ Var nom (ind - 1)
-        None      -> fail $ "Unbound variable: " ++ show imp
-    All nom bod -> return (Clo env nom bod)
-    App opr opd -> do
-        whd <- normalize env opr
-        case whd of
-            Clo sen nom bod -> do arg <- normalize env opd
-                                  normalize (extend sen nom arg) bod
-            _               -> do arg <- normalize env opd
-                                  return $ App whd arg
+run :: Env -> Normalization r -> Either String r
+run env nlz = runIdentity . runErrorT $ runReaderT nlz env
 
 shift :: Nom -> Lvl -> Int -> Imp -> Imp
 shift nam lvl stp imp = case imp of
@@ -92,11 +77,30 @@ shift nam lvl stp imp = case imp of
   where
     level nom = if nom == nam then lvl + 1 else lvl
 
+normalize :: Imp -> Normalization Imp
+normalize imp = case imp of
+    Var nom ind -> do
+        env <- ask
+        case search env nom ind of
+            Exact imp -> return imp
+            Beyond    -> return $ Var nom (ind - 1)
+            None      -> fail $ "Unbound variable: " ++ show imp
+    All nom bod -> do env <- ask
+                      return (Clo env nom bod)
+    App opr opd -> do
+        whd <- normalize opr
+        case whd of
+            Clo sen nom bod -> do arg <- normalize opd
+                                  local (const $ extend sen nom arg)
+                                        (normalize bod)
+            _               -> do arg <- normalize opd
+                                  return $ App whd arg
+
 deep :: Imp -> Normalization Imp
 deep imp = case imp of
-    Clo env nom bod -> do let wen = fmap (fmap $ shift nom 0 1) env
+    Clo sen nom bod -> do let wen = fmap (fmap $ shift nom 0 1) sen
                               len = extend wen nom (var nom)
-                          whd <- normalize len bod
+                          whd <- local (const len) (normalize bod)
                           hd  <- deep whd
                           return (All nom hd)
     App opr opd     -> do hd  <- deep opr
@@ -104,11 +108,11 @@ deep imp = case imp of
                           return (App hd arg)
     _               -> return imp
 
-norm :: Env -> Imp -> Normalization Imp
-norm env imp = normalize env imp >>= deep
+norm :: Imp -> Normalization Imp
+norm imp = normalize imp >>= deep
 
 nlz :: Imp -> Imp
-nlz imp = case run (norm M.empty imp) of
+nlz imp = case run M.empty (norm imp) of
     Left err -> error err
     Right hn -> hn
 
