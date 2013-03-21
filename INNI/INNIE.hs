@@ -61,10 +61,16 @@ extend env nom imp
   | otherwise  = M.insertWith (S.><) nom (S.singleton imp) env
 
 
-type Normalization r = ReaderT Env (ErrorT String Identity) r
+type Msg = String
+type Stp = Integer
+type Normalization r = ReaderT Env (ErrorT Msg (StateT Stp Identity)) r
 
-run :: Env -> Normalization r -> Either String r
-run env nlz = runIdentity . runErrorT $ runReaderT nlz env
+tick :: (Num s, MonadState s m) => m ()
+tick = do st <- get
+          put (st + 1)
+
+run :: Env -> Stp -> Normalization r -> (Either Msg r, Stp)
+run env stp nlz = runIdentity $ runStateT (runErrorT $ runReaderT nlz env) stp
 
 shift :: Nom -> Lvl -> Int -> Imp -> Imp
 shift nam lvl stp imp = case imp of
@@ -80,14 +86,17 @@ shift nam lvl stp imp = case imp of
 normalize :: Imp -> Normalization Imp
 normalize imp = case imp of
     Var nom ind -> do
+        tick
         env <- ask
         case search env nom ind of
             Exact imp -> return imp
             Beyond    -> return $ Var nom (ind - 1)
             None      -> fail $ "Unbound variable: " ++ show imp
-    All nom bod -> do env <- ask
+    All nom bod -> do tick
+                      env <- ask
                       return (Clo env nom bod)
     App opr opd -> do
+        tick
         whd <- normalize opr
         case whd of
             Clo sen nom bod -> do arg <- normalize opd
@@ -112,9 +121,9 @@ norm :: Imp -> Normalization Imp
 norm imp = normalize imp >>= deep
 
 nlz :: Imp -> Imp
-nlz imp = case run M.empty (norm imp) of
-    Left err -> error err
-    Right hn -> hn
+nlz imp = case run M.empty 0 (norm imp) of
+    (Left msg, stp) -> error $ msg ++ ", after " ++ show stp ++ " steps"
+    (Right hn, _  ) -> hn
 
 
 tests :: [Imp]
